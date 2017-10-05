@@ -20,7 +20,10 @@ end
     @test parsefield(b"222;xx;", 5, Int, ';') ≅ MaybeParsed{Int}(INVALID)
     @test parsefield(b"22;77", 4, Int, FixedWidth(2)) ≅ MaybeParsed(6, 77)
     @test parsefield(b"111", 1, Int, ';') ≅ MaybeParsed{Int}(EOL)
+    @test parsefield(b"11x", 1, Int, FixedWidth(3)) ≅ MaybeParsed{Int}(INVALID)
+    @test parsefield(b"11", 1, Int, FixedWidth(3)) ≅ MaybeParsed{Int}(EOL)
     @test @isinferred parsefield(b"11", 1, Int, ';')
+    @test @isinferred parsefield(b"11", 1, Int, FixedWidth(4))
 end
 
 @testset "skip or verbatim strings" begin

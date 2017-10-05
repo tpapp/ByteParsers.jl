@@ -130,7 +130,7 @@ function parsefield(str::ByteVector, start, ::Type{T}, width::FixedWidth,
     z = UInt8('0')
     pos = start
     stop = start + width.width
-    @argcheck stop ≤ len+1 "Too short for fixed width parsing."
+    stop ≤ len + 1 || return MaybeParsed{Int}(EOL)
     @inbounds while pos < stop
         maybe_digit = str[pos] - z
         if 0 ≤ maybe_digit ≤ 9
