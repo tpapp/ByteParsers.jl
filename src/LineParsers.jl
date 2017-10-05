@@ -21,14 +21,14 @@ struct ParserException <: Exception end
 
 const ByteVector = Vector{UInt8}
 
-struct MaybeParsed{S <: Signed,T}
+struct MaybeParsed{T,S <: Signed}
     pos::S
     value::T
-    MaybeParsed{T}(pos::S) where {S,T} = new{S,T}(pos)
-    MaybeParsed(pos::S, value::T) where {S,T} = new{S,T}(pos, value)
+    MaybeParsed{T}(pos::S) where {T,S} = new{T,S}(pos)
+    MaybeParsed(pos::S, value::T) where {T,S} = new{T,S}(pos, value)
 end
 
-function Base.isequal(x::MaybeParsed{Sx,Tx}, y::MaybeParsed{Sy,Ty}) where {Sx,Tx,Sy,Ty}
+function Base.isequal(x::MaybeParsed{Tx,Sx}, y::MaybeParsed{Ty,Sy}) where {Tx,Sx,Ty,Sy}
     if isbits(Tx) && isbits(Ty)
         (x.pos == y.pos) & ifelse(x.pos > 0, isequal(x.value, y.value), true)
     else
@@ -174,7 +174,7 @@ function parsefield(str::ByteVector, start, ::Type{DateYYYYMMDD{strict}},
     isparsed(pos) || return MaybeParsed{Date}(pos)
 
     pos, d = pos_value(parsefield(str, pos, Int, FixedWidth(2)))
-    isparsed(d) || return MaybeParsed{Date}(pos)
+    isparsed(pos) || return MaybeParsed{Date}(pos)
 
     str[pos] == sep || @goto invalid
 

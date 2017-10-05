@@ -21,11 +21,18 @@ end
 end
 
 @testset "skip or verbatim strings" begin
-    @test parsefield(b"xxx;yyyy;", 5, SkipField(), ';') ≅ MaybeParsed(9, nothing)
-    @test parsefield(b"xxx;yyyy;", 5, ViewField(), ';') ≅ MaybeParsed(9, @view(b"yyyy"[:]))
+    @test parsefield(b"xxx;yyyy;", 5, SkipField(), ';') ≅
+        MaybeParsed(9, nothing)
+    @test parsefield(b"xxx;yyyy;", 5, ViewField(), ';') ≅
+        MaybeParsed(9, @view(b"yyyy"[:]))
 end
 
 @testset "dates" begin
     @test parsefield(b"xxx;19800101;", 5, DateYYYYMMDD{true}, ';') ≅
-        MaybeParsed(13, Date(1980,1,1))
+        MaybeParsed(13, Date(1980, 1, 1))
+    @test parsefield(b"xxx;19801000;", 5, DateYYYYMMDD{true}, ';') ≅
+        MaybeParsed{Date}(INVALID)
+    @test parsefield(b"xxx;19801000;", 5, DateYYYYMMDD{false}, ';') ≅
+        MaybeParsed(13, Date(1980, 1, 1))
+
 end
