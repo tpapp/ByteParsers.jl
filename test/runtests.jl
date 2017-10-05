@@ -24,14 +24,14 @@ end
 end
 
 @testset "skip or verbatim strings" begin
-    @test parsefield(b"xxx;yyyy;", 5, SkipField(), ';') ≅
+    @test parsefield(b"xxx;yyyy;", 5, SkipField, ';') ≅
         MaybeParsed(9, nothing)
-    @test parsefield(b"xxx;yyyy;", 5, ViewField(), ';') ≅
+    @test parsefield(b"xxx;yyyy;", 5, ViewField, ';') ≅
         MaybeParsed(9, @view(b"yyyy"[:]))
-    @test parsefield(b"nosep", 1, SkipField(), ';') ≅ MaybeParsed{Void}(EOL)
-    @test parsefield(b"nosep", 1, ViewField(), ';') ≅ MaybeParsed{String}(EOL)
-    @test @isinferred parsefield(b"something", 1, SkipField(), UInt8(';'))
-    @test @isinferred parsefield(b"something", 1, ViewField(), UInt8(';'))
+    @test parsefield(b"nosep", 1, SkipField, ';') ≅ MaybeParsed{Void}(EOL)
+    @test parsefield(b"nosep", 1, ViewField, ';') ≅ MaybeParsed{String}(EOL)
+    @test @isinferred parsefield(b"something", 1, SkipField, UInt8(';'))
+    @test @isinferred parsefield(b"something", 1, ViewField, UInt8(';'))
 end
 
 @testset "dates" begin

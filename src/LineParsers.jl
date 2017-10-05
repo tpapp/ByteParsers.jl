@@ -195,7 +195,8 @@ Skip the field, returning `nothing`.
 """
 struct SkipField end
 
-function parsefield(str::ByteVector, start, ::SkipField, sep::UInt8, len = length(str))
+function parsefield(str::ByteVector, start, ::Type{SkipField}, sep::UInt8,
+                    len = length(str))
     pos = start
     @inbounds while pos ≤ len
         str[pos] == sep && return MaybeParsed(pos, nothing)
@@ -211,8 +212,9 @@ Return the contents of the field as a `SubArray` (view).
 """
 struct ViewField end
 
-function parsefield(str::ByteVector, start, ::ViewField, sep::UInt8, len = length(str))
-    pos, _ = pos_value(parsefield(str, start, SkipField(), sep, len))
+function parsefield(str::ByteVector, start, ::Type{ViewField}, sep::UInt8,
+                    len = length(str))
+    pos, _ = pos_value(parsefield(str, start, SkipField, sep, len))
     MaybeParsed(pos, @view(str[start:(ifelse(isparsed(pos),pos-1,0))]))
 end
 
