@@ -44,15 +44,6 @@ pos_value(mp::MaybeParsed) = mp.pos, mp.value
 
 MaybeParsed{T}(mp::MaybeParsed{T}) where {T} = mp
 
-function MaybeParsed{T}(mp::MaybeParsed) where {T}
-    @unpack pos, value = mp
-    if pos > 0
-        MaybeParsed{T}(pos, convert(T, value))
-    else
-        MaybeParsed{T}(pos)
-    end
-end
-
 "Invalid character."
 const INVALID = -1
 
