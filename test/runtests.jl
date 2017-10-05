@@ -30,9 +30,8 @@ end
 @testset "dates" begin
     @test parsefield(b"xxx;19800101;", 5, DateYYYYMMDD{true}, ';') ≅
         MaybeParsed(13, Date(1980, 1, 1))
-    @test parsefield(b"xxx;19801000;", 5, DateYYYYMMDD{true}, ';') ≅
+    @test parsefield(b"xxx;19800100;", 5, DateYYYYMMDD{true}, ';') ≅
         MaybeParsed{Date}(INVALID)
-    @test parsefield(b"xxx;19801000;", 5, DateYYYYMMDD{false}, ';') ≅
+    @test parsefield(b"xxx;19800100;", 5, DateYYYYMMDD{false}, ';') ≅
         MaybeParsed(13, Date(1980, 1, 1))
-
 end
