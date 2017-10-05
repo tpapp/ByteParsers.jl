@@ -14,10 +14,11 @@ const ≅ = isequal               # infix is more compact
     @test !isparsed(MaybeParsed{Int}(EOL))
 end
 
-@testset "number parsing" begin
+@testset "integer parsing" begin
     @test parsefield(b"119;", 1, Int, ';') ≅ MaybeParsed(4, 119)
     @test parsefield(b"222;xx;", 5, Int, ';') ≅ MaybeParsed{Int}(INVALID)
     @test parsefield(b"22;77", 4, Int, FixedWidth(2)) ≅ MaybeParsed(6, 77)
+    @test parsefield(b"111", 1, Int, ';') ≅ MaybeParsed{Int}(EOL)
 end
 
 @testset "skip or verbatim strings" begin
@@ -25,6 +26,8 @@ end
         MaybeParsed(9, nothing)
     @test parsefield(b"xxx;yyyy;", 5, ViewField(), ';') ≅
         MaybeParsed(9, @view(b"yyyy"[:]))
+    @test parsefield(b"nosep", 1, SkipField(), ';') ≅ MaybeParsed{Void}(EOL)
+    @test parsefield(b"nosep", 1, ViewField(), ';') ≅ MaybeParsed{String}(EOL)
 end
 
 @testset "dates" begin

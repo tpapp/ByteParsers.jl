@@ -213,7 +213,7 @@ struct ViewField end
 
 function parsefield(str::ByteVector, start, ::ViewField, sep::UInt8, len = length(str))
     pos, _ = pos_value(parsefield(str, start, SkipField(), sep, len))
-    isparsed(pos) ? MaybeParsed(pos, @view(str[start:(pos-1)])) : MaybeParsed(pos)
+    MaybeParsed(pos, @view(str[start:(ifelse(isparsed(pos),pos-1,0))]))
 end
 
 end # module
