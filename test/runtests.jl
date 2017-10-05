@@ -1,5 +1,6 @@
 using LineParsers
 using Base.Test
+using InferenceUtilities
 
 const ≅ = isequal               # infix is more compact
 
@@ -19,6 +20,7 @@ end
     @test parsefield(b"222;xx;", 5, Int, ';') ≅ MaybeParsed{Int}(INVALID)
     @test parsefield(b"22;77", 4, Int, FixedWidth(2)) ≅ MaybeParsed(6, 77)
     @test parsefield(b"111", 1, Int, ';') ≅ MaybeParsed{Int}(EOL)
+    @test @isinferred parsefield(b"11", 1, Int, ';')
 end
 
 @testset "skip or verbatim strings" begin
@@ -28,6 +30,8 @@ end
         MaybeParsed(9, @view(b"yyyy"[:]))
     @test parsefield(b"nosep", 1, SkipField(), ';') ≅ MaybeParsed{Void}(EOL)
     @test parsefield(b"nosep", 1, ViewField(), ';') ≅ MaybeParsed{String}(EOL)
+    @test @isinferred parsefield(b"something", 1, SkipField(), UInt8(';'))
+    @test @isinferred parsefield(b"something", 1, ViewField(), UInt8(';'))
 end
 
 @testset "dates" begin
@@ -37,4 +41,5 @@ end
         MaybeParsed{Date}(INVALID)
     @test parsefield(b"xxx;19800100;", 5, DateYYYYMMDD{false}, ';') ≅
         MaybeParsed(13, Date(1980, 1, 1))
+    @test @isinferred parsefield(b"19800101", 1, DateYYYYMMDD{true}, ';')
 end
