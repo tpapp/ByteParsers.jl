@@ -33,7 +33,7 @@ have to match (`==`), values only when parsed (`isequal`). Useful for testing.
 end
 
 @testset "integer parsing" begin
-    @test parsefield(b"119;", 1, Int, ';') ≂ MaybeParsed(4, 119)
+    @test parsefield(b"119;", 1, Int, ';') ≂ MaybeParsed(5, 119)
     @test parsefield(b"222;xx;", 5, Int, ';') ≂ MaybeParsed{Int}(INVALID)
     @test parsefield(b"22;77", 4, Int, FixedWidth(2)) ≂ MaybeParsed(6, 77)
     @test parsefield(b"111", 1, Int, ';') ≂ MaybeParsed{Int}(EOL)
@@ -45,9 +45,9 @@ end
 
 @testset "skip or verbatim strings" begin
     @test parsefield(b"xxx;yyyy;", 5, SkipField, ';') ≂
-        MaybeParsed(9, nothing)
+        MaybeParsed(10, nothing)
     @test parsefield(b"xxx;yyyy;", 5, ViewField, ';') ≅
-        MaybeParsed(9, b"yyyy"[:])
+        MaybeParsed(10, b"yyyy"[:])
     @test parsefield(b"nosep", 1, SkipField, ';') ≂ MaybeParsed{Void}(EOL)
     @test parsefield(b"nosep", 1, ViewField, ';') ≅ MaybeParsed{String}(EOL)
     @test @isinferred parsefield(b"something", 1, SkipField, UInt8(';'))
@@ -56,10 +56,25 @@ end
 
 @testset "dates" begin
     @test parsefield(b"xxx;19800101;", 5, DateYYYYMMDD{true}, ';') ≂
-        MaybeParsed(13, Date(1980, 1, 1))
+        MaybeParsed(14, Date(1980, 1, 1))
     @test parsefield(b"xxx;19800100;", 5, DateYYYYMMDD{true}, ';') ≂
         MaybeParsed{Date}(INVALID)
     @test parsefield(b"xxx;19800100;", 5, DateYYYYMMDD{false}, ';') ≂
-        MaybeParsed(13, Date(1980, 1, 1))
+        MaybeParsed(14, Date(1980, 1, 1))
     @test @isinferred parsefield(b"19800101", 1, DateYYYYMMDD{true}, ';')
+end
+
+@testset "parsed types" begin
+    @test parsedtype(b"", 9, Int, UInt8(';')) ≡ Int
+    @test parsedtype(b"", 9, DateYYYYMMDD{true}, UInt8(';')) ≡ Date
+    @test parsedtype(b"", 9, SkipField, UInt8(';')) ≡ Void
+    @test parsedtype(b"", 9, ViewField, UInt8(';')) ≡ typeof(@view b"xx"[1:1])
+end
+
+@testset "parseline" begin
+    @test isequal(parseline(b"1212;skipped;kept;", ';',
+                            (Int, SkipField, ViewField)),
+                  (MaybeParsed(19, (1212, nothing, b"kept")), 3))
+    @test isequal(parseline(b"1bad;", ';', (Int,)),
+                  (MaybeParsed{Tuple{Int}}(INVALID), 0))
 end

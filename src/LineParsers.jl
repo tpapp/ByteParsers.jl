@@ -9,10 +9,12 @@ export
     isparsed,
     INVALID, EOL, EMPTY,
     parsefield,
+    parsedtype,
     FixedWidth,
     DateYYYYMMDD,
     SkipField,
-    ViewField
+    ViewField,
+    parseline
 
 ######################################################################
 # general interface
@@ -62,14 +64,52 @@ delimits fields, or the number of characters to parse.
 
 Parsing stops at byte `len`, which defaults to the length of `str`.
 
-The result is returned as a `MaybeParsed{T}` object, with either position (or an
-error code), and the value. `parser` determines `T`.
+The result is returned as a `MaybeParsed{T}` object, with either position at the
+last character parsed (or an error code), and the value. `parser` determines
+`T`.
 """
 function parsefield end
 
-function parsefield(str::ByteVector, start, T, sep::Char, args...)
-    @argcheck Int(sep) ≤ 0x80
-    parsefield(str, start, T, UInt8(sep), args...)
+function _safe_char2uint8(c::Char)
+    @argcheck Int(c) ≤ 0x80
+    UInt8(c)
+end
+
+parsefield(str::ByteVector, start, T, sep::Char, args...) =
+    parsefield(str, start, T, _safe_char2uint8(sep), args...)
+
+_value_type_parameter(::Type{MaybeParsed{T,S}}) where {T,S} = T
+_value_type_parameter(T::S) where {S <: MaybeParsed} =
+    _value_type_parameter(S)
+
+"""
+    parsedtype(str, start, parser, separator)
+
+Return a type `T` such that `parsefield` called with the same parameters returns
+a value of type `MaybeParsed{T,S}`.
+
+!!! note
+
+    Relies on type inference unless overridden.
+"""
+function parsedtype(str::Tstr, start::Tstart, ::Type{T}, sep::Tsep) where
+    {Tstr, Tstart, T, Tsep}
+    T_ = Base._return_type(parsefield, Tuple{Tstr, Tstart, Type{T}, Tsep})
+    _value_type_parameter(T_)
+end
+
+"""
+
+   parsefield(::Void, pos, parser, sep)
+
+Return `MaybeParsed{T}(pos)`, where `T` matcheds the type parameter of the value
+returned by the same call with a `ByteVector` as the first parameter.
+
+The function is useful for writing type stable code when parsing the parsed has
+given up on a set of fields.
+"""
+function parsefield(::Void, pos::P, ::Type{T}, sep::S) where {P, T, S}
+    MaybeParsed{_value_type_parameter(T_)}(pos)
 end
 
 ######################################################################
@@ -83,7 +123,8 @@ Parse an integer of the given type until `separator`.
 
 !!! warning
 
-    Does not check overflow; if you have too many digits, this can be a problem.
+    Does not check overflow; if you have too many digits, this can be a
+    problem. Make sure you use a wide enough type.
 """
 function parsefield(str::ByteVector, start, ::Type{T}, sep::UInt8,
                     len = length(str)) where {T <: Integer}
@@ -92,7 +133,7 @@ function parsefield(str::ByteVector, start, ::Type{T}, sep::UInt8,
     pos = start
     @inbounds while pos ≤ len
         chr = str[pos]
-        chr == sep && return MaybeParsed(pos == start ? EMPTY : pos, n)
+        chr == sep && return MaybeParsed(pos == start ? EMPTY : pos + 1, n)
         maybe_digit = chr - z
         if 0 ≤ maybe_digit ≤ 9
             n = n*10 + maybe_digit
@@ -173,7 +214,7 @@ function parsefield(str::ByteVector, start, ::Type{DateYYYYMMDD{strict}},
 
     (m ≤ 12 && d ≤ Base.Dates.daysinmonth(y, m)) || @goto invalid
 
-    return MaybeParsed(pos, Date(y, m, d))
+    return MaybeParsed(pos + 1, Date(y, m, d))
 
     @label invalid
     MaybeParsed{Date}(INVALID)
@@ -190,7 +231,7 @@ function parsefield(str::ByteVector, start, ::Type{SkipField}, sep::UInt8,
                     len = length(str))
     pos = start
     @inbounds while pos ≤ len
-        str[pos] == sep && return MaybeParsed(pos, nothing)
+        str[pos] == sep && return MaybeParsed(pos + 1, nothing)
         pos += 1
     end
     MaybeParsed{Void}(EOL)
@@ -206,7 +247,49 @@ struct ViewField end
 function parsefield(str::ByteVector, start, ::Type{ViewField}, sep::UInt8,
                     len = length(str))
     pos, _ = pos_value(parsefield(str, start, SkipField, sep, len))
-    MaybeParsed(pos, @view(str[start:(ifelse(isparsed(pos),pos-1,0))]))
+    MaybeParsed(pos, @view(str[start:(ifelse(isparsed(pos),pos-2,0))]))
 end
+
+######################################################################
+# line parsing
+######################################################################
+
+"""
+    parseline_(str, sep, previous_fields, field_counter)
+
+Parse `str`, which contains fields separated by `sep`. `previous_fields` is a
+`MaybeParsed(pos, values)` object where `values` are the previously parsed
+fields and parsing continues from `pos + 1`. `field_counter` is the number of
+fields parsed so far.
+
+!!! NOTE
+    Internal function, not part of the API.
+"""
+parseline_(str, sep, previous_fields, field_counter) =
+    previous_fields, field_counter
+
+function parseline_(str, sep, previous_fields, field_counter,
+                    parsers_first, parsers_tail...)
+    previous_pos, previous_value = pos_value(previous_fields)
+    current_field = parsefield(str, previous_pos, parsers_first, sep)
+    if isparsed(current_field)
+        pos, value = pos_value(current_field)
+        parseline_(str, sep, MaybeParsed(pos, (previous_value..., value)),
+                   field_counter + 1, parsers_tail...)
+    else
+        pos = current_field.pos
+        previous_types = _value_type_parameter(previous_fields).parameters
+        current_type = _value_type_parameter(current_field)
+        next_types = map(p -> parsedtype(str, pos, p, sep), parsers_tail)
+        T = Tuple{previous_types..., current_type, next_types...}
+        MaybeParsed{T}(pos), field_counter
+    end
+end
+
+parseline(str, sep, parsers) = parseline_(str, sep, MaybeParsed(1, ()), 0,
+                                          parsers...)
+
+parseline(str::ByteVector, sep::Char, parsers) =
+    parseline(str, _safe_char2uint8(sep), parsers)
 
 end # module
