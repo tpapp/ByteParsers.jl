@@ -287,7 +287,7 @@ if parsing was successful. Note that values for a `SkipField` parser are skipped
         end
     end
     parser_blocks_ex = quote $(parser_blocks...) end
-    field_vars_ex = :(($(map(v -> :(unsafe_get($v)), kept_field_vars)...),))
+    field_vars_ex = :($(map(v -> :(unsafe_get($v)), kept_field_vars)...),)
     quote
         $pos_var = 1
         $(parser_blocks_ex)
