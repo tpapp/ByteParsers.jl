@@ -257,41 +257,44 @@ end
 ######################################################################
 
 """
-    parseline_(str, sep, previous_fields, field_counter)
+    parseline(str, sep, parsers...)
 
-Parse `str`, which contains fields separated by `sep`. `previous_fields` is a
-`MaybeParsed(pos, values)` object where `values` are the previously parsed
-fields and parsing continues from `pos + 1`. `field_counter` is the number of
-fields parsed so far.
+Parse `str`, which contains fields separated by `sep`, using `parsers`.
 
-!!! NOTE
-    Internal function, not part of the API.
+Return a `MaybeParsed(pos, values)`, where `values` is a tuple of parsed values
+if parsing was successful. Note that values for a `SkipField` parser are skipped.
 """
-parseline_(str, sep, previous_fields, field_counter) =
-    previous_fields, field_counter
-
-function parseline_(str, sep, previous_fields, field_counter,
-                    parsers_first, parsers_tail...)
-    previous_pos, previous_value = pos_value(previous_fields)
-    current_field = parsefield(str, previous_pos, parsers_first, sep)
-    if isparsed(current_field)
-        pos, value = pos_value(current_field)
-        parseline_(str, sep, MaybeParsed(pos, (previous_value..., value)),
-                   field_counter + 1, parsers_tail...)
-    else
-        pos = current_field.pos
-        previous_types = _value_type_parameter(previous_fields).parameters
-        current_type = _value_type_parameter(current_field)
-        next_types = map(p -> parsedtype(str, pos, p, sep), parsers_tail)
-        T = Tuple{previous_types..., current_type, next_types...}
-        MaybeParsed{T}(pos), field_counter
+@generated function parseline(str, sep, parsers...)
+    extractT(::Type{MaybeParsed{T,S}}) where {T,S} = T
+    extractT(::Type{Type{T}}) where {T} = T
+    pos_var = :pos
+    field_vars = [Symbol(:field, i) for i in 1:length(parsers)]
+    invalid_label = :invalid
+    parser_blocks = Any[]
+    kept_field_vars = Symbol[]
+    parsed_types = Any[]
+    for (parser, field_var) in zip(parsers, field_vars)
+        parserT = extractT(parser)
+        push!(parser_blocks,
+              :($field_var = parsefield(str, $pos_var, $parserT, sep)),
+              :($pos_var = $field_var.pos),
+              :(isparsed($pos_var) || @goto $invalid_label))
+        if parserT ≠ SkipField
+            tt = Tuple{str, Int, parser, sep}
+            # NOTE manual says not to use Core.Inference in generated functions
+            push!(parsed_types, extractT(Base._return_type(parsefield, tt)))
+            push!(kept_field_vars, field_var)
+        end
+    end
+    parser_blocks_ex = quote $(parser_blocks...) end
+    field_vars_ex = Expr(:tuple, map(v -> :(unsafe_get($v)), kept_field_vars)...)
+    quote
+        $pos_var = 1
+        $(parser_blocks_ex)
+        return MaybeParsed($pos_var, $(field_vars_ex))
+        @label $invalid_label
+        MaybeParsed{Tuple{$(parsed_types)...}}($pos_var)
     end
 end
-
-parseline(str, sep, parsers) = parseline_(str, sep, MaybeParsed(1, ()), 0,
-                                          parsers...)
-
-parseline(str::ByteVector, sep::Char, parsers) =
-    parseline(str, _safe_char2uint8(sep), parsers)
 
 end # module

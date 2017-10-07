@@ -74,9 +74,8 @@ end
 end
 
 @testset "parseline" begin
-    @test isequal(parseline(b"1212;skipped;kept;", ';',
-                            (Int, SkipField, ViewField)),
-                  (MaybeParsed(19, (1212, nothing, b"kept")), 3))
-    @test isequal(parseline(b"1bad;", ';', (Int,)),
-                  (MaybeParsed{Tuple{Int}}(INVALID), 0))
+    line1 = b"1212;skipped;kept;"
+    mp1 = MaybeParsed(length(line1)+1, (1212, b"kept"))
+    @test parseline(line1, ';', Int, SkipField, ViewField) ≅ mp1
+    @test parseline(b"1bad;", UInt8(';'), Int, SkipField) ≅ MaybeParsed{Tuple{Int}}(INVALID)
 end
