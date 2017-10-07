@@ -42,6 +42,8 @@ isparsed(pos::Int) = pos > 0
 
 isparsed(mp::MaybeParsed) = isparsed(mp.pos) > 0
 
+Base.unsafe_get(mp::MaybeParsed) = mp.value
+
 pos_value(mp::MaybeParsed) = mp.pos, mp.value
 
 MaybeParsed{T}(mp::MaybeParsed{T}) where {T} = mp

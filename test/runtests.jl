@@ -30,6 +30,8 @@ have to match (`==`), values only when parsed (`isequal`). Useful for testing.
     @test !(MaybeParsed(3, 3) ≅ MaybeParsed(2, 3))
     @test isparsed(MaybeParsed(1,1))
     @test !isparsed(MaybeParsed{Int}(EOL))
+    @test unsafe_get(MaybeParsed(1, 10)) ≡ 10
+    @test_throws UndefRefError unsafe_get(MaybeParsed{String}(1))
 end
 
 @testset "integer parsing" begin
