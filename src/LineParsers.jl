@@ -25,7 +25,7 @@ abstract type AbstractParser{T} end
 
 Return type of a parser, see [`parsenext`](@ref).
 """
-function parsedtype end
+parsedtype(::AbstractParser{T}) where {T} = T
 
 """
     parsenext(parser, str, pos, sep)::MaybeParsed{parsedtype(parser)}
@@ -68,9 +68,7 @@ end
 # integer parsing
 ######################################################################
 
-struct PositiveInteger{T <: Integer} end
-
-parsedtype(::PositiveInteger{T}) where T = T
+struct PositiveInteger{T <: Integer} <: AbstractParser{T} end
 
 PositiveInteger(T::Type{<:Integer} = Int) = PositiveInteger{T}()
 
@@ -101,7 +99,7 @@ function parsenext(parser::PositiveInteger{T}, str, start, sep::C) where {T, C}
     MaybeParsed(pos, n)
 end
 
-struct PositiveFixedInteger{T <: Integer}
+struct PositiveFixedInteger{T <: Integer} <: AbstractParser{T}
     width::Int
     function PositiveFixedInteger{T}(width::Int) where {T}
         @argcheck width ≥ 1
@@ -132,9 +130,7 @@ function parsenext(parser::PositiveFixedInteger{T}, str, start, sep::C) where {T
     MaybeParsed(pos, n)
 end
 
-struct DateYYYYMMDD end
-
-parsedtype(::DateYYYYMMDD) = Date
+struct DateYYYYMMDD <: AbstractParser{Date} end
 
 function parsenext(parser::DateYYYYMMDD, str, pos, sep)
     @checkpos (pos, year) = parsenext(PositiveFixedInteger(4), str, pos, sep)
