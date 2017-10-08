@@ -12,6 +12,7 @@ export
     PositiveInteger,
     PositiveFixedInteger,
     DateYYYYMMDD,
+    Skip,
     Line
 
 ######################################################################
@@ -145,6 +146,21 @@ function parsenext(parser::DateYYYYMMDD, str::ByteVector, pos, sep)
     return MaybeParsed(pos, Date(year, month, day))
     @label error
     MaybeParsed{Date}(pos)
+end
+
+######################################################################
+# skip and view fields
+######################################################################
+
+struct Skip <: AbstractParser{Void} end
+
+function parsenext(parser::Skip, str::ByteVector, pos, sep::UInt8)
+    len = length(str)
+    @inbounds while pos ≤ len
+        str[pos] == sep && return MaybeParsed(pos + 1, nothing)
+        pos += 1
+    end
+    MaybeParsed{Void}(pos_to_error(pos))
 end
 
 ######################################################################
