@@ -16,6 +16,9 @@ export
 
 ######################################################################
 # generic interface
+######################################################################
+
+const ByteVector = Vector{UInt8}
 
 "A parser that parses to `MaybeParsed{T}` values."
 abstract type AbstractParser{T} end
@@ -72,7 +75,7 @@ struct PositiveInteger{T <: Integer} <: AbstractParser{T} end
 
 PositiveInteger(T::Type{<:Integer} = Int) = PositiveInteger{T}()
 
-function parsenext(parser::PositiveInteger{T}, str, start, sep::C) where {T, C}
+function parsenext(parser::PositiveInteger{T}, str::ByteVector, start, sep::C) where {T, C}
     n = zero(T)
     z = C('0')
     pos = start
@@ -110,7 +113,8 @@ end
 PositiveFixedInteger(width, T::Type{<: Integer} = Int) =
     PositiveFixedInteger{T}(width)
 
-function parsenext(parser::PositiveFixedInteger{T}, str, start, sep::C) where {T, C}
+function parsenext(parser::PositiveFixedInteger{T}, str::ByteVector, start,
+                   sep::C) where {T, C}
     n = zero(T)
     z = C('0')
     pos = start
@@ -132,7 +136,7 @@ end
 
 struct DateYYYYMMDD <: AbstractParser{Date} end
 
-function parsenext(parser::DateYYYYMMDD, str, pos, sep)
+function parsenext(parser::DateYYYYMMDD, str::ByteVector, pos, sep)
     @checkpos (pos, year) = parsenext(PositiveFixedInteger(4), str, pos, sep)
     @checkpos (pos, month) = parsenext(PositiveFixedInteger(2), str, pos, sep)
     @checkpos (pos, day) = parsenext(PositiveFixedInteger(2), str, pos, sep)
@@ -155,7 +159,7 @@ Line{T <: Tuple}(parsers::T) = Line{T, Tuple{map(parsedtype, parsers)...}}(parse
 
 const LineN{N, S} = Line{T, S} where T <: NTuple{N, Any}
 
-@generated function parsenext(line::LineN{N, S}, str, pos, sep) where {N, S}
+@generated function parsenext(line::LineN{N, S}, str::ByteVector, pos, sep) where {N, S}
     quote
         R = MaybeParsed{S}
         Base.@nexprs $N j -> begin
