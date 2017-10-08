@@ -147,7 +147,7 @@ end
 # lines
 ######################################################################
 
-struct Line{T <: Tuple, S}
+struct Line{T <: Tuple, S} <: AbstractParser{S}
     parsers::T
 end
 
