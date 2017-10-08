@@ -13,6 +13,7 @@ export
     PositiveFixedInteger,
     DateYYYYMMDD,
     Skip,
+    ViewBytes,
     Line
 
 ######################################################################
@@ -161,6 +162,19 @@ function parsenext(parser::Skip, str::ByteVector, pos, sep::UInt8)
         pos += 1
     end
     MaybeParsed{Void}(pos_to_error(pos))
+end
+
+struct ViewBytes <: AbstractParser{SubArray{UInt8,1,Array{UInt8,1},
+                                            Tuple{UnitRange{Int64}},
+                                            true}}
+end
+
+function parsenext(parser::ViewBytes, str::ByteVector, start, sep::UInt8)
+    pos = start
+    @checkpos (pos, value) = parsenext(Skip(), str, pos, sep)
+    return MaybeParsed(pos, @view str[start:(pos-1)])
+    @label error
+    MaybeParsed{parsedtype(parser)}(pos)
 end
 
 ######################################################################
