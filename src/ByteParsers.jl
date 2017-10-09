@@ -1,4 +1,4 @@
-module LineParsers
+module ByteParsers
 
 using MacroTools
 using ArgCheck
