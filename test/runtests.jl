@@ -43,6 +43,7 @@ end
     @test parsenext(PositiveInteger(), b"111", 1, sc) ≂ MaybeParsed{Int}(-4)
     @test parsenext(PositiveFixedInteger(3), b"11x", 1, sc) ≂ MaybeParsed{Int}(-3)
     @test parsenext(PositiveFixedInteger(3), b"11", 1, sc) ≂ MaybeParsed{Int}(-3)
+    @test parsenext(PositiveInteger(), b";", 1, sc) ≂ MaybeParsed{Int}(-1)
     @test @isinferred parsenext(PositiveInteger(), b"11", 1, sc)
     @test @isinferred parsenext(PositiveFixedInteger(3), b"11", 1, sc)
 end

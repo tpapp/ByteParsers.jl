@@ -108,7 +108,7 @@ function parsenext(parser::PositiveInteger{T}, str::ByteVector, start::Int,
         chr = str[pos]
         if chr == sep
             if pos == start
-                pos == pos_to_error(pos) # empty field
+                pos = pos_to_error(pos) # empty field
             else
                 pos += 1
             end
