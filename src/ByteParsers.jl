@@ -217,6 +217,8 @@ end
 
 Line{T <: Tuple}(parsers::T) = Line{T, Tuple{map(parsedtype, parsers)...}}(parsers)
 
+Line(parsers::AbstractParser...) = Line(parsers)
+
 const LineN{N, S} = Line{T, S} where T <: NTuple{N, Any}
 
 @generated function parsenext(line::LineN{N, S}, str::ByteVector, pos, sep) where {N, S}
