@@ -31,7 +31,8 @@ abstract type AbstractParser{T} end
 """
     parsedtype(parser)
 
-Return type of a parser, see [`parsenext`](@ref).
+Return type of a parser, see [`parsenext`](@ref). See [`Line`](@ref) for the
+semantics of skipping types which parse into `Void`.
 """
 parsedtype(::AbstractParser{T}) where {T} = T
 
@@ -94,6 +95,14 @@ end
 # integer parsing
 ######################################################################
 
+"""
+    PositiveInteger(T = Int)
+
+Parse a positive integer until a delimiter as type `T`.
+
+!!! NOTE
+    Does not check for overflows, make sure `T` has enough digits.
+"""
 struct PositiveInteger{T <: Integer} <: AbstractParser{T} end
 
 PositiveInteger(T::Type{<:Integer} = Int) = PositiveInteger{T}()
@@ -130,6 +139,14 @@ function parsenext(parser::PositiveInteger{T}, str::ByteVector, start::Int,
     MaybeParsed(pos, n)
 end
 
+"""
+    PositiveFixedInteger(width::Int, T = Int)
+
+Parse a positive integer of *fixed width* as type `T`.
+
+!!! NOTE
+    Does not check for overflows, make sure `T` has enough digits.
+"""
 struct PositiveFixedInteger{T <: Integer} <: AbstractParser{T}
     width::Int
     function PositiveFixedInteger{T}(width::Int) where {T}
@@ -162,6 +179,11 @@ function parsenext(parser::PositiveFixedInteger{T}, str::ByteVector, start, sep)
     MaybeParsed(pos, n)
 end
 
+"""
+    DateYYYYMMDD()
+
+Parse a date in YYYYMMDD format.
+"""
 struct DateYYYYMMDD <: AbstractParser{Date} end
 
 function parsenext(parser::DateYYYYMMDD, str::ByteVector, pos, sep)
@@ -183,6 +205,11 @@ end
 # skip and view fields
 ######################################################################
 
+"""
+    Skip()
+
+Skip a delimited field.
+"""
 struct Skip <: AbstractParser{Void} end
 
 function parsenext(parser::Skip, str::ByteVector, pos, sep::UInt8)
@@ -194,6 +221,12 @@ function parsenext(parser::Skip, str::ByteVector, pos, sep::UInt8)
     MaybeParsed{Void}(pos_to_error(pos))
 end
 
+"""
+    ViewBytes()
+
+Return the delimited field as a view (`SubArray`) into the parsed vector,
+without the delimiter.
+"""
 struct ViewBytes <: AbstractParser{SubArray{UInt8,1,Array{UInt8,1},
                                             Tuple{UnitRange{Int64}},
                                             true}}
@@ -211,6 +244,24 @@ end
 # lines
 ######################################################################
 
+"""
+    Line(parsers...)
+
+Parse a string using `parsers`, separated by the separator given to
+`parsenext`. Parsed values are returned as a tuple, wrapped in a `MaybeParsed`,
+except for parsers which have `parsedtype(parser) == Void`, which are skipped.
+
+# implementation
+
+The return type is calculated and saved in parameter `S`, while the indices of
+parsers for which the values are kept are in `K`. For example, for
+
+```julia
+Line(PositiveInteger(), Skip(), DateYYYYMMDD())
+ ```
+
+`S == Tuple{Int, Date}` and `K == (1, 3)`.
+"""
 struct Line{T <: Tuple, S, K} <: AbstractParser{S}
     parsers::T
 end
@@ -232,6 +283,19 @@ function _tuplefor(itr, ex)
     Expr(:escape, Expr(:tuple, vars...))
 end
 
+"""
+    @tuplefor itr expr
+
+Generates a tuple using `Base.Cartesian.inlineanonymous`, using elements in
+`itr` (cf `Base.Cartesian.@ntuple`, which is a special case of this for `itr =
+1:N`). For example,
+
+```julia @tuplefor (1,2,9) k ``` would generate ```julia (k_1, k_2, k_9) ```
+
+!!! NOTE
+
+    internal use, not exported.
+"""
 macro tuplefor(itr, ex)
     _tuplefor(itr, ex)
 end
