@@ -211,23 +211,39 @@ end
 # lines
 ######################################################################
 
-struct Line{T <: Tuple, S} <: AbstractParser{S}
+struct Line{T <: Tuple, S, K} <: AbstractParser{S}
     parsers::T
 end
 
-Line{T <: Tuple}(parsers::T) = Line{T, Tuple{map(parsedtype, parsers)...}}(parsers)
+function Line{T <: Tuple}(parsers::T)
+    parsedtypes = map(parsedtype, parsers)
+    keep(T) = T ≠ Void
+    S = Tuple{Iterators.filter(keep, parsedtypes)...}
+    K = tuple(find(keep, parsedtypes)...)
+    Line{T, S, K}(parsers)
+end
 
 Line(parsers::AbstractParser...) = Line(parsers)
 
-const LineN{N, S} = Line{T, S} where T <: NTuple{N, Any}
+const LineN{N, S, K} = Line{T, S, K} where T <: NTuple{N, Any}
 
-@generated function parsenext(line::LineN{N, S}, str::ByteVector, pos, sep) where {N, S}
+function _tuplefor(itr, ex)
+    vars = [ Base.Cartesian.inlineanonymous(ex, i) for i in itr ]
+    Expr(:escape, Expr(:tuple, vars...))
+end
+
+macro tuplefor(itr, ex)
+    _tuplefor(itr, ex)
+end
+
+@generated function parsenext(line::LineN{N, S, K}, str::ByteVector,
+                              pos, sep) where {N, S, K}
     quote
         R = MaybeParsed{S}
         Base.@nexprs $N j -> begin
             @checkpos (pos, value_j) = parsenext(line.parsers[j], str, pos, sep)
         end
-        return R(pos, Base.@ntuple $N value)
+        return R(pos, @tuplefor $K value)
         @label error
         R(pos)
     end

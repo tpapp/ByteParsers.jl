@@ -75,7 +75,7 @@ end
 
 @testset "parsing line" begin
     line1 = b"1212;skipped;kept;"
-    mp1 = MaybeParsed(length(line1)+1, (1212, nothing, b"kept"))
+    mp1 = MaybeParsed(length(line1)+1, (1212, b"kept")) # second value skipped
     parser1 = Line(PositiveInteger(), Skip(), ViewBytes())
     @test parsenext(parser1, line1, 1, sc) ≅ mp1
     @test parsenext(Line(PositiveInteger()), b"1bad;", 1, sc) ≅
