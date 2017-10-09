@@ -3,11 +3,14 @@ module LineParsers
 using MacroTools
 using ArgCheck
 
+using Base.Dates: daysinmonth, UTD, totaldays
+
 export
     # generic
     parsedtype,
     parsenext,
     MaybeParsed,
+    isparsed,
     # parsers
     PositiveInteger,
     PositiveFixedInteger,
@@ -36,9 +39,15 @@ parsedtype(::AbstractParser{T}) where {T} = T
     parsenext(parser, str, pos, sep)::MaybeParsed{parsedtype(parser)}
 
 Parse `str` starting at `pos` using `parser`. Variable-length fields are parsed
-until terminated by `sep`. Return a [`MaybeParsed`](@ref) object.
+until terminated by `sep`. Return a [`MaybeParsed`](@ref) object, the position
+is that of the next character after parsing.
 """
 function parsenext end
+
+function parsenext(parser, str::AbstractString, pos, sep::Char)
+    @argcheck Int(sep) < 0x80
+    parsenext(parser, convert(ByteVector, str), pos, UInt8(sep))
+end
 
 """
     MaybeParsed(pos, [value])
@@ -54,7 +63,19 @@ struct MaybeParsed{T}
     MaybeParsed(pos, value::T) where {T} = new{T}(pos, value)
 end
 
-@inline pos_to_error(pos, errorcode = 0) = -pos
+@inline Base.unsafe_get(x::MaybeParsed) = x.value
+
+function Base.isequal(x::MaybeParsed{Tx}, y::MaybeParsed{Ty}) where {Tx,Ty}
+    if isbits(Tx) && isbits(Ty)
+        (x.pos == y.pos) & ifelse(x.pos > 0, isequal(x.value, y.value), true)
+    else
+        x.pos == y.pos && (x.pos > 0 ? isequal(x.value, y.value) : true)
+    end
+end
+
+@inline pos_to_error(pos) = -pos
+
+@inline isparsed(x::MaybeParsed) = x.pos > 0
 
 macro checkpos(ex, label = :error)
     @capture ex (pos_, value_) = rhs_
@@ -77,16 +98,17 @@ struct PositiveInteger{T <: Integer} <: AbstractParser{T} end
 
 PositiveInteger(T::Type{<:Integer} = Int) = PositiveInteger{T}()
 
-function parsenext(parser::PositiveInteger{T}, str::ByteVector, start, sep::C) where {T, C}
+function parsenext(parser::PositiveInteger{T}, str::ByteVector, start::Int,
+                   sep::UInt8) where {T}
     n = zero(T)
-    z = C('0')
+    z = UInt8('0')
     pos = start
     len = length(str)
-    @inbounds while pos ≤ len
+    @inbounds while true
         chr = str[pos]
         if chr == sep
             if pos == start
-                pos == pos_to_error(pos)
+                pos == pos_to_error(pos) # empty field
             else
                 pos += 1
             end
@@ -97,6 +119,10 @@ function parsenext(parser::PositiveInteger{T}, str::ByteVector, start, sep::C) w
             n = n*10 + maybe_digit
             pos += 1
         else
+            pos = pos_to_error(pos) # invalid character
+            break
+        end
+        if pos > len           # EOL without separator
             pos = pos_to_error(pos)
             break
         end
@@ -115,13 +141,13 @@ end
 PositiveFixedInteger(width, T::Type{<: Integer} = Int) =
     PositiveFixedInteger{T}(width)
 
-function parsenext(parser::PositiveFixedInteger{T}, str::ByteVector, start,
-                   sep::C) where {T, C}
+function parsenext(parser::PositiveFixedInteger{T}, str::ByteVector, start, sep) where {T}
     n = zero(T)
-    z = C('0')
+    z = UInt8('0')
     pos = start
     stop = start + parser.width - 1
-    @assert stop ≤ length(str)
+    len = length(str)
+    stop > len && return MaybeParsed{Int}(pos_to_error(len+1))
     @inbounds while pos ≤ stop
         chr = str[pos]
         maybe_digit = chr - z
@@ -139,14 +165,18 @@ end
 struct DateYYYYMMDD <: AbstractParser{Date} end
 
 function parsenext(parser::DateYYYYMMDD, str::ByteVector, pos, sep)
+    len = length(str)
+    len ≥ pos + 8 || return MaybeParsed{Date}(pos_to_error(pos + 9)) # not enough characters
     @checkpos (pos, year) = parsenext(PositiveFixedInteger(4), str, pos, sep)
     @checkpos (pos, month) = parsenext(PositiveFixedInteger(2), str, pos, sep)
+    1 ≤ month ≤ 12 || (pos -= 2; @goto error)
     @checkpos (pos, day) = parsenext(PositiveFixedInteger(2), str, pos, sep)
-    str[pos] == sep || @goto error
+    1 ≤ day ≤ daysinmonth(year, month) || (pos -= 2; @goto error)
+    @inbounds str[pos] == sep || @goto error
     pos += 1
-    return MaybeParsed(pos, Date(year, month, day))
+    return MaybeParsed(pos, Date(UTD(totaldays(year, month, day))))
     @label error
-    MaybeParsed{Date}(pos)
+    MaybeParsed{Date}(pos_to_error(pos))
 end
 
 ######################################################################
@@ -172,7 +202,7 @@ end
 function parsenext(parser::ViewBytes, str::ByteVector, start, sep::UInt8)
     pos = start
     @checkpos (pos, value) = parsenext(Skip(), str, pos, sep)
-    return MaybeParsed(pos, @view str[start:(pos-1)])
+    return MaybeParsed(pos, @view str[start:(pos-2)])
     @label error
     MaybeParsed{parsedtype(parser)}(pos)
 end
