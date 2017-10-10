@@ -37,7 +37,7 @@ have to match (`==`), values only when parsed (`isequal`). Useful for testing.
         @test getpos(mp) == 2
         @test isparsed(mp)
     end
-    let mp = MaybeParserd(ByteParsers.pos_to_error(7), 19)
+    let mp = MaybeParsed(ByteParsers.pos_to_error(7), 19)
         @test getpos(mp) == 7
         @test !isparsed(mp)
     end
