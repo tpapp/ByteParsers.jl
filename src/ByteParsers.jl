@@ -295,6 +295,10 @@ function _tuplefor(itr, ex)
     Expr(:escape, Expr(:tuple, vars...))
 end
 
+Base.getindex(line::Line{T, S, K}, i) where {T,S,K} = line.parsers[K[i]]
+
+Base.length(line::Line{T, S, K}) where {T,S,K} = length(K)
+
 """
     @tuplefor itr expr
 

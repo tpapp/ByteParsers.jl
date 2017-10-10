@@ -84,6 +84,9 @@ end
     line1 = b"1212;skipped;kept;"
     mp1 = MaybeParsed(length(line1)+1, (1212, b"kept")) # second value skipped
     parser1 = Line(PositiveInteger(), Skip(), ViewBytes())
+    @test length(parser1) == 2
+    @test parser1[1] == PositiveInteger()
+    @test parser1[2] == ViewBytes()
     @test parsenext(parser1, line1, 1, sc) ≅ mp1
     @test parsenext(Line(PositiveInteger()), b"1bad;", 1, sc) ≅
         MaybeParsed{Tuple{Int}}(-2)
