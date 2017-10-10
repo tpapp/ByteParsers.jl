@@ -11,6 +11,7 @@ export
     parsenext,
     MaybeParsed,
     isparsed,
+    getpos,
     # parsers
     PositiveInteger,
     PositiveFixedInteger,
@@ -54,7 +55,7 @@ end
     MaybeParsed(pos, [value])
 
 When `pos > 0`, it is the position of the character after parsing, and `value`
-holds the value. When `pos < 0`, it wraps the error code.
+holds the value. When `pos < 0`, it wraps the error code (see `pos_to_error`).
 """
 struct MaybeParsed{T}
     pos::Int
@@ -65,6 +66,17 @@ struct MaybeParsed{T}
 end
 
 @inline Base.unsafe_get(x::MaybeParsed) = x.value
+
+"""
+    getpos(x::MaybeParsed)
+
+When `isparsed(x)`, return the position of the *next* byte after parsing the
+value that was returned as `x`.
+
+Otherwise, return the position of the byte where parsing failed (may be outside
+the length of the string for end of line errors).
+"""
+@inline getpos(x::MaybeParsed) = abs(x.pos)
 
 function Base.isequal(x::MaybeParsed{Tx}, y::MaybeParsed{Ty}) where {Tx,Ty}
     if isbits(Tx) && isbits(Ty)

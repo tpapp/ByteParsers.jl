@@ -30,10 +30,17 @@ have to match (`==`), values only when parsed (`isequal`). Useful for testing.
     @test !(MaybeParsed{Int}(-3) ≅ MaybeParsed{Int}(-4))
     @test !(MaybeParsed(2, 3) ≅ MaybeParsed(2, 4))
     @test !(MaybeParsed(3, 3) ≅ MaybeParsed(2, 3))
-    @test isparsed(MaybeParsed(1,1))
-    @test !isparsed(MaybeParsed{Int}(-1))
     @test unsafe_get(MaybeParsed(1, 10)) ≡ 10
     @test_throws UndefRefError unsafe_get(MaybeParsed{String}(1))
+    @test getpos(MaybeParsed(5, 10)) == 5
+    let mp = MaybeParsed(2,5)
+        @test getpos(mp) == 2
+        @test isparsed(mp)
+    end
+    let mp = MaybeParserd(ByteParsers.pos_to_error(7), 19)
+        @test getpos(mp) == 7
+        @test !isparsed(mp)
+    end
 end
 
 @testset "integer parsing" begin
