@@ -27,3 +27,14 @@ representations (eg digits, decimal dot) don't require working with
 
 - `Base.DateFormat` which is now amazingly fast, thanks to the great work in 
 [#18000](https://github.com/JuliaLang/julia/pull/18000), [#15888](https://github.com/JuliaLang/julia/issues/15888), [19545](https://github.com/JuliaLang/julia/pull/19545)
+
+# Comparisons
+
+As of Oct 30, 2017, running on my Dell XPS 13 laptop with a `Intel(R) Core(TM) i7-6560U CPU @ 2.20GHz`. You can find the source in <benchmark/benchmark_comparisons.jl>
+
+| parsing                                        | ByteParsers | TextParse |
+|:-----------------------------------------------|------------:|----------:|
+| `"123456789;"` as `Int`                        |       15 ns |     21 ns |
+| `"19800101;"` as `Date`                        |       29 ns |     65 ns |
+| `"foobar;"` as a `String` (view or equivalent) |       19 ns |     25 ns |
+| `"foobar;"` skipped until separator `;`        |        6 ns |       n/a |
