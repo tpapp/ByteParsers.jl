@@ -30,7 +30,7 @@ representations (eg digits, decimal dot) don't require working with
 
 # Comparisons
 
-As of Oct 30, 2017, running on my Dell XPS 13 laptop with a `Intel(R) Core(TM) i7-6560U CPU @ 2.20GHz`. You can find the source in <benchmark/benchmark_comparisons.jl>
+As of Oct 30, 2017, running on my Dell XPS 13 laptop with a `Intel(R) Core(TM) i7-6560U CPU @ 2.20GHz`. [(source)](benchmark/benchmark_comparison.jl)
 
 | parsing                                        | ByteParsers | TextParse |
 |:-----------------------------------------------|------------:|----------:|
