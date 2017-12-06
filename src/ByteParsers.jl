@@ -1,10 +1,11 @@
+__precompile__()
 module ByteParsers
 
-using MacroTools
+using Base.Dates: daysinmonth, UTD, totaldays
+
 using ArgCheck
 using DocStringExtensions
-
-using Base.Dates: daysinmonth, UTD, totaldays
+using MacroTools
 
 export
     # generic
