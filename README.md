@@ -25,7 +25,7 @@ representations (eg digits, decimal dot) don't require working with
 - [TextParse.jl](https://github.com/JuliaComputing/TextParse.jl),
   which is also fast and much more versatile and polished
 
-- `Base.DateFormat` which is now amazingly fast, thanks to the great work in 
+- `Base.DateFormat` which is now amazingly fast, thanks to the great work in
 [#18000](https://github.com/JuliaLang/julia/pull/18000), [#15888](https://github.com/JuliaLang/julia/issues/15888), [19545](https://github.com/JuliaLang/julia/pull/19545)
 
 # Comparisons
