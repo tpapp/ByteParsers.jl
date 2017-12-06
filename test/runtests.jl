@@ -44,15 +44,20 @@ have to match (`==`), values only when parsed (`isequal`). Useful for testing.
 end
 
 @testset "integer parsing" begin
-    @test parsenext(PositiveInteger(), "119;", 1, ';') ≂ MaybeParsed(5, 119)
-    @test parsenext(PositiveInteger(), "222;xx;", 5, ';') ≂ MaybeParsed{Int}(-5)
-    @test parsenext(PositiveFixedInteger(2), "22;77", 4, ';') ≂ MaybeParsed(6, 77)
-    @test parsenext(PositiveInteger(), b"111", 1, sc) ≂ MaybeParsed{Int}(-4)
-    @test parsenext(PositiveFixedInteger(3), b"11x", 1, sc) ≂ MaybeParsed{Int}(-3)
-    @test parsenext(PositiveFixedInteger(3), b"11", 1, sc) ≂ MaybeParsed{Int}(-3)
-    @test parsenext(PositiveInteger(), b";", 1, sc) ≂ MaybeParsed{Int}(-1)
-    @test @isinferred parsenext(PositiveInteger(), b"11", 1, sc)
-    @test @isinferred parsenext(PositiveFixedInteger(3), b"11", 1, sc)
+    @test parsenext(PosInteger(), "119;", 1, ';') ≂ MaybeParsed(5, 119)
+    @test parsenext(PosInteger(), "222;xx;", 5, ';') ≂ MaybeParsed{Int}(-5)
+    @test parsenext(PosFixedInteger(2), "22;77", 4, ';') ≂ MaybeParsed(6, 77)
+    @test parsenext(PosInteger(), b"111", 1, sc) ≂ MaybeParsed{Int}(-4)
+    @test parsenext(PosFixedInteger(3), b"11x", 1, sc) ≂ MaybeParsed{Int}(-3)
+    @test parsenext(PosFixedInteger(3), b"11", 1, sc) ≂ MaybeParsed{Int}(-3)
+    @test parsenext(PosInteger(), b";", 1, sc) ≂ MaybeParsed{Int}(-1)
+    @test @isinferred parsenext(PosInteger(), b"11", 1, sc)
+    @test @isinferred parsenext(PosFixedInteger(3), b"11", 1, sc)
+    # typed
+    for T ∈ [Int8, Int16, Int32, Int64, BigInt]
+        @test parsenext(PosInteger(T), b"19;", 1, sc) ≂ MaybeParsed(4, T(19))
+    end
+    @test_throws InexactError parsenext(PosInteger(Int8), b"300", 1, sc)
 end
 
 @testset "skip or verbatim strings" begin
@@ -74,8 +79,8 @@ end
 end
 
 @testset "parsed types" begin
-    @test parsedtype(PositiveInteger()) ≡ Int
-    @test parsedtype(PositiveFixedInteger(2)) ≡ Int
+    @test parsedtype(PosInteger()) ≡ Int
+    @test parsedtype(PosFixedInteger(2)) ≡ Int
     @test parsedtype(Skip()) ≡ Void
     @test parsedtype(ViewBytes()) ≡ typeof(@view b"xx"[1:1])
 end
@@ -83,12 +88,12 @@ end
 @testset "parsing line" begin
     line1 = b"1212;skipped;kept;"
     mp1 = MaybeParsed(length(line1)+1, (1212, b"kept")) # second value skipped
-    parser1 = Line(PositiveInteger(), Skip(), ViewBytes())
+    parser1 = Line(PosInteger(), Skip(), ViewBytes())
     @test length(parser1) == 2
-    @test parser1[1] == PositiveInteger()
+    @test parser1[1] == PosInteger()
     @test parser1[2] == ViewBytes()
     @test parsenext(parser1, line1, 1, sc) ≅ mp1
-    @test parsenext(Line(PositiveInteger()), b"1bad;", 1, sc) ≅
+    @test parsenext(Line(PosInteger()), b"1bad;", 1, sc) ≅
         MaybeParsed{Tuple{Int}}(-2)
     @test @isinferred parsenext(parser1, line1, 1, sc)
 end

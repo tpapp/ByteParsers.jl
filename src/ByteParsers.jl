@@ -2,6 +2,7 @@ module ByteParsers
 
 using MacroTools
 using ArgCheck
+using DocStringExtensions
 
 using Base.Dates: daysinmonth, UTD, totaldays
 
@@ -13,8 +14,8 @@ export
     isparsed,
     getpos,
     # parsers
-    PositiveInteger,
-    PositiveFixedInteger,
+    PosInteger,
+    PosFixedInteger,
     DateYYYYMMDD,
     Skip,
     ViewBytes,
@@ -107,21 +108,25 @@ end
 # integer parsing
 ######################################################################
 
+struct PosInteger{T <: Integer, S <: Integer} <: AbstractParser{T} end
+
 """
-    PositiveInteger(T = Int)
+    $SIGNATURES
 
-Parse a positive integer until a delimiter as type `T`.
-
-!!! NOTE
-    Does not check for overflows, make sure `T` has enough digits.
+Parse a positive integer until a delimiter as the first type. The second type is
+used for the internal accumulation of digits, which is *not checked for
+overflows*, but conversions to `T` are.
 """
-struct PositiveInteger{T <: Integer} <: AbstractParser{T} end
+function PosInteger(T::Type{<:Integer} = Int, S::Type{<:Integer} = Int64)
+    if !(promote_type(T, S) ≡ S)
+        warn("Using narrower type for parsing than return value.")
+    end
+    PosInteger{T, S}()
+end
 
-PositiveInteger(T::Type{<:Integer} = Int) = PositiveInteger{T}()
-
-function parsenext(parser::PositiveInteger{T}, str::ByteVector, start::Int,
-                   sep::UInt8) where {T}
-    n = zero(T)
+function parsenext(parser::PosInteger{T,S}, str::ByteVector, start::Int,
+                   sep::UInt8) where {T,S}
+    n = zero(S)
     z = UInt8('0')
     pos = start
     len = length(str)
@@ -143,34 +148,34 @@ function parsenext(parser::PositiveInteger{T}, str::ByteVector, start::Int,
             pos = pos_to_error(pos) # invalid character
             break
         end
-        if pos > len           # EOL without separator
+        if pos > len            # EOL without separator
             pos = pos_to_error(pos)
             break
         end
     end
-    MaybeParsed(pos, n)
+    MaybeParsed(pos, T(n))
 end
 
 """
-    PositiveFixedInteger(width::Int, T = Int)
+    PosFixedInteger(width::Int, T = Int)
 
 Parse a positive integer of *fixed width* as type `T`.
 
 !!! NOTE
     Does not check for overflows, make sure `T` has enough digits.
 """
-struct PositiveFixedInteger{T <: Integer} <: AbstractParser{T}
+struct PosFixedInteger{T <: Integer} <: AbstractParser{T}
     width::Int
-    function PositiveFixedInteger{T}(width::Int) where {T}
+    function PosFixedInteger{T}(width::Int) where {T}
         @argcheck width ≥ 1
         new{T}(width)
     end
 end
 
-PositiveFixedInteger(width, T::Type{<: Integer} = Int) =
-    PositiveFixedInteger{T}(width)
+PosFixedInteger(width, T::Type{<: Integer} = Int) =
+    PosFixedInteger{T}(width)
 
-function parsenext(parser::PositiveFixedInteger{T}, str::ByteVector, start, sep) where {T}
+function parsenext(parser::PosFixedInteger{T}, str::ByteVector, start, sep) where {T}
     n = zero(T)
     z = UInt8('0')
     pos = start
@@ -201,10 +206,10 @@ struct DateYYYYMMDD <: AbstractParser{Date} end
 function parsenext(parser::DateYYYYMMDD, str::ByteVector, pos, sep)
     len = length(str)
     len ≥ pos + 8 || return MaybeParsed{Date}(pos_to_error(pos + 9)) # not enough characters
-    @checkpos (pos, year) = parsenext(PositiveFixedInteger(4), str, pos, sep)
-    @checkpos (pos, month) = parsenext(PositiveFixedInteger(2), str, pos, sep)
+    @checkpos (pos, year) = parsenext(PosFixedInteger(4), str, pos, sep)
+    @checkpos (pos, month) = parsenext(PosFixedInteger(2), str, pos, sep)
     1 ≤ month ≤ 12 || (pos -= 2; @goto error)
-    @checkpos (pos, day) = parsenext(PositiveFixedInteger(2), str, pos, sep)
+    @checkpos (pos, day) = parsenext(PosFixedInteger(2), str, pos, sep)
     1 ≤ day ≤ daysinmonth(year, month) || (pos -= 2; @goto error)
     @inbounds str[pos] == sep || @goto error
     pos += 1
@@ -269,7 +274,7 @@ The return type is calculated and saved in parameter `S`, while the indices of
 parsers for which the values are kept are in `K`. For example, for
 
 ```julia
-Line(PositiveInteger(), Skip(), DateYYYYMMDD())
+Line(PosInteger(), Skip(), DateYYYYMMDD())
  ```
 
 `S == Tuple{Int, Date}` and `K == (1, 3)`.
