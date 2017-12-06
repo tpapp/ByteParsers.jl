@@ -5,7 +5,7 @@
 [![Coverage Status](https://coveralls.io/repos/tpapp/ByteParsers.jl/badge.svg?branch=master&service=github)](https://coveralls.io/github/tpapp/ByteParsers.jl?branch=master)
 [![codecov.io](http://codecov.io/github/tpapp/ByteParsers.jl/coverage.svg?branch=master)](http://codecov.io/github/tpapp/ByteParsers.jl?branch=master)
 
-# What
+## What
 
 Parse delimited fields in `Vector{UInt8}` representation of
 strings. This library is an **experiment** which I found useful in my
@@ -13,14 +13,14 @@ own work. *The API may change at any point without notice or
 deprecations.* See the docstrings and the unit tests for usage
 information.
 
-# Why
+## Why
 
 Benchmarks suggest that this can be significantly faster than working
 with `String`s, and most delimiters (eg ';', ',') and parsed
 representations (eg digits, decimal dot) don't require working with
 `UTF8` in any case.
 
-# Alternatives
+## Alternatives
 
 - [TextParse.jl](https://github.com/JuliaComputing/TextParse.jl),
   which is also fast and much more versatile and polished
@@ -28,7 +28,7 @@ representations (eg digits, decimal dot) don't require working with
 - `Base.DateFormat` which is now amazingly fast, thanks to the great work in
 [#18000](https://github.com/JuliaLang/julia/pull/18000), [#15888](https://github.com/JuliaLang/julia/issues/15888), [19545](https://github.com/JuliaLang/julia/pull/19545)
 
-# Comparisons
+## Comparisons
 
 As of Oct 30, 2017, running on my Dell XPS 13 laptop with a `Intel(R) Core(TM) i7-6560U CPU @ 2.20GHz`. [(source)](benchmark/benchmark_comparison.jl)
 
