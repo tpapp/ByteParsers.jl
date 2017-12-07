@@ -22,20 +22,24 @@ export
     ViewBytes,
     Line
 
-######################################################################
+
 # generic interface
-######################################################################
 
 const ByteVector = Vector{UInt8}
 
-"A parser that parses to `MaybeParsed{T}` values."
+"""
+A parser that parses to `MaybeParsed{T}` values.
+
+Supports [`parsedtype`](@ref) and [`parsenext`](@ref) methods.
+"""
 abstract type AbstractParser{T} end
 
 """
     parsedtype(parser)
 
-Return type of a parser, see [`parsenext`](@ref). See [`Line`](@ref) for the
-semantics of skipping types which parse into `Void`.
+Return type of a parser, see [`parsenext`](@ref).
+
+See [`Line`](@ref) for the semantics of skipping types which parse into `Void`.
 """
 parsedtype(::AbstractParser{T}) where {T} = T
 
@@ -44,7 +48,7 @@ parsedtype(::AbstractParser{T}) where {T} = T
 
 Parse `str` starting at `pos` using `parser`. Variable-length fields are parsed
 until terminated by `sep`. Return a [`MaybeParsed`](@ref) object, the position
-is that of the next character after parsing.
+is that of the *next* character after parsing.
 """
 function parsenext end
 
@@ -57,7 +61,8 @@ end
     MaybeParsed(pos, [value])
 
 When `pos > 0`, it is the position of the character after parsing, and `value`
-holds the value. When `pos < 0`, it wraps the error code (see `pos_to_error`).
+holds the value. When `pos < 0`, it wraps the error code (see
+[`pos_to_error`](@ref)).
 """
 struct MaybeParsed{T}
     pos::Int
@@ -70,10 +75,10 @@ end
 @inline Base.unsafe_get(x::MaybeParsed) = x.value
 
 """
-    getpos(x::MaybeParsed)
+    $SIGNATURES
 
-When `isparsed(x)`, return the position of the *next* byte after parsing the
-value that was returned as `x`.
+When [`isparsed(x)`](@ref), return the position of the *next* byte after parsing
+the value that was returned as `x`.
 
 Otherwise, return the position of the byte where parsing failed (may be outside
 the length of the string for end of line errors).
@@ -88,10 +93,27 @@ function Base.isequal(x::MaybeParsed{Tx}, y::MaybeParsed{Ty}) where {Tx,Ty}
     end
 end
 
-@inline pos_to_error(pos) = -pos
+"""
+    $SIGNATURES
 
+Convert a position to an error code.
+"""
+@inline pos_to_error(pos::Int) = -pos
+
+"""
+    $SIGNATURES
+
+Test if the object has been parsed (otherwise, it contains an error).
+"""
 @inline isparsed(x::MaybeParsed) = x.pos > 0
 
+"""
+    pos, value = @checkpos x [label]
+
+Macro for checking a [`MaybeParsed`](@ref) object (eg returned by
+[`parsenext`](@ref). If there is an error, `@goto label` is invoked, otherwise
+the position and the parsed value are extracted into `pos` and `value`.
+"""
 macro checkpos(ex, label = :error)
     @capture ex (pos_, value_) = rhs_
     quote
@@ -105,9 +127,8 @@ macro checkpos(ex, label = :error)
     end
 end
 
-######################################################################
+
 # integer parsing
-######################################################################
 
 struct PosInteger{T <: Integer, S <: Integer} <: AbstractParser{T} end
 
@@ -157,14 +178,6 @@ function parsenext(parser::PosInteger{T,S}, str::ByteVector, start::Int,
     MaybeParsed(pos, T(n))
 end
 
-"""
-    PosFixedInteger(width::Int, T = Int)
-
-Parse a positive integer of *fixed width* as type `T`.
-
-!!! NOTE
-    Does not check for overflows, make sure `T` has enough digits.
-"""
 struct PosFixedInteger{T <: Integer} <: AbstractParser{T}
     width::Int
     function PosFixedInteger{T}(width::Int) where {T}
@@ -173,10 +186,19 @@ struct PosFixedInteger{T <: Integer} <: AbstractParser{T}
     end
 end
 
+"""
+    $SIGNATURES
+
+Parse a positive integer of *fixed width* as type `T`.
+
+!!! NOTE
+    Does not check for overflows, make sure `T` has enough digits.
+"""
 PosFixedInteger(width, T::Type{<: Integer} = Int) =
     PosFixedInteger{T}(width)
 
-function parsenext(parser::PosFixedInteger{T}, str::ByteVector, start, sep) where {T}
+function parsenext(parser::PosFixedInteger{T}, str::ByteVector, start,
+                   sep) where {T}
     n = zero(T)
     z = UInt8('0')
     pos = start
@@ -219,9 +241,8 @@ function parsenext(parser::DateYYYYMMDD, str::ByteVector, pos, sep)
     MaybeParsed{Date}(pos_to_error(pos))
 end
 
-######################################################################
+
 # skip and view fields
-######################################################################
 
 """
     Skip()
@@ -258,9 +279,8 @@ function parsenext(parser::ViewBytes, str::ByteVector, start, sep::UInt8)
     MaybeParsed{parsedtype(parser)}(pos)
 end
 
-######################################################################
+
 # lines
-######################################################################
 
 """
     Line(parsers...)
