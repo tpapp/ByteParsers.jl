@@ -58,6 +58,10 @@ end
         @test parsenext(PosInteger(T), b"19;", 1, sc) ≂ MaybeParsed(4, T(19))
     end
     @test_throws InexactError parsenext(PosInteger(Int8), b"300", 1, sc)
+    @test repr(PosInteger(Int16, Int32)) ==
+        "Parse positive integer into Int16 (accumulating in Int32)"
+    @test repr(PosFixedInteger(4, Int16)) ==
+        "Parse positive integer of 4 digits into Int16"
 end
 
 @testset "skip or verbatim strings" begin

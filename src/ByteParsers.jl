@@ -3,7 +3,7 @@ module ByteParsers
 
 using Base.Dates: daysinmonth, UTD, totaldays
 
-import Base: getindex, isequal, length, unsafe_get
+import Base: getindex, isequal, length, show, unsafe_get
 
 using ArgCheck
 using DocStringExtensions
@@ -148,6 +148,9 @@ function PosInteger(T::Type{<:Integer} = Int, S::Type{<:Integer} = Int64)
     PosInteger{T, S}()
 end
 
+show(io::IO, parser::PosInteger{T, S}) where {T, S} =
+     print(io, "Parse positive integer into $T (accumulating in $S)")
+
 function parsenext(parser::PosInteger{T,S}, str::ByteVector, start::Int,
                    sep::UInt8) where {T,S}
     n = zero(S)
@@ -187,6 +190,9 @@ struct PosFixedInteger{T <: Integer} <: AbstractParser{T}
         new{T}(width)
     end
 end
+
+show(io::IO, parser::PosFixedInteger{T}) where T =
+     print(io, "Parse positive integer of $(parser.width) digits into $T")
 
 """
     $SIGNATURES
