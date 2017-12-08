@@ -91,7 +91,7 @@ end
     @test parsenext(p, b";", 1, sc) ≂ MaybeParsed{Int}(2, -1)
     @test parsenext(p, b"2;", 1, sc) ≂ MaybeParsed{Int}(3, 2)
     @test parsedtype(p) ≡ Int
-    @test repr(p) == "parse empty fields as -1, otherwise $(inner_parser)"
+    @test repr(p) == "parse empty fields as -1, otherwise " * repr(PosInteger())
 end
 
 @testset "parsed types" begin
