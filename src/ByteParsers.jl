@@ -3,6 +3,8 @@ module ByteParsers
 
 using Base.Dates: daysinmonth, UTD, totaldays
 
+import Base: getindex, isequal, length, unsafe_get
+
 using ArgCheck
 using DocStringExtensions
 using MacroTools
@@ -72,7 +74,7 @@ struct MaybeParsed{T}
     MaybeParsed(pos, value::T) where {T} = new{T}(pos, value)
 end
 
-@inline Base.unsafe_get(x::MaybeParsed) = x.value
+@inline unsafe_get(x::MaybeParsed) = x.value
 
 """
     $SIGNATURES
@@ -85,7 +87,7 @@ the length of the string for end of line errors).
 """
 @inline getpos(x::MaybeParsed) = abs(x.pos)
 
-function Base.isequal(x::MaybeParsed{Tx}, y::MaybeParsed{Ty}) where {Tx,Ty}
+function isequal(x::MaybeParsed{Tx}, y::MaybeParsed{Ty}) where {Tx,Ty}
     if isbits(Tx) && isbits(Ty)
         (x.pos == y.pos) & ifelse(x.pos > 0, isequal(x.value, y.value), true)
     else
@@ -321,9 +323,9 @@ function _tuplefor(itr, ex)
     Expr(:escape, Expr(:tuple, vars...))
 end
 
-Base.getindex(line::Line{T, S, K}, i) where {T,S,K} = line.parsers[K[i]]
+getindex(line::Line{T, S, K}, i) where {T,S,K} = line.parsers[K[i]]
 
-Base.length(line::Line{T, S, K}) where {T,S,K} = length(K)
+length(line::Line{T, S, K}) where {T,S,K} = length(K)
 
 """
     @tuplefor itr expr
