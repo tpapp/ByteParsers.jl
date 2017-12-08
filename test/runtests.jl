@@ -71,6 +71,8 @@ end
     @test parsenext(ViewBytes(), b"nosep", 1, sc) ≅ MaybeParsed{String}(-6)
     @test @isinferred parsenext(Skip(), b"something", 1, sc)
     @test @isinferred parsenext(ViewBytes(), b"something", 1, sc)
+    @test repr(Skip()) == "skip field (parsed as `nothing`)"
+    @test repr(ViewBytes()) == "return field as bytes (SubArray)"
 end
 
 @testset "dates" begin
@@ -80,6 +82,7 @@ end
     @test parsenext(DateYYYYMMDD(), b"19809900;", 1, sc) ≂ MaybeParsed{Date}(-5)
     @test parsenext(DateYYYYMMDD(), b"19800101", 1, sc) ≂ MaybeParsed{Date}(-10)
     @test @isinferred parsenext(DateYYYYMMDD(), b"19800101;", 1, sc)
+    @test repr(DateYYYYMMDD()) == "Parse date in YYYYMMDD format"
 end
 
 @testset "parsed types" begin
@@ -100,4 +103,7 @@ end
     @test parsenext(Line(PosInteger()), b"1bad;", 1, sc) ≅
         MaybeParsed{Tuple{Int}}(-2)
     @test @isinferred parsenext(parser1, line1, 1, sc)
+    @test repr(parser1) ==
+        ("parse line as the following:\n    " * repr(PosInteger()) * "\n    " *
+         repr(Skip()) * "\n    " * repr(ViewBytes()))
 end

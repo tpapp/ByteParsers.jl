@@ -234,6 +234,8 @@ Parse a date in YYYYMMDD format.
 """
 struct DateYYYYMMDD <: AbstractParser{Date} end
 
+show(io::IO, ::DateYYYYMMDD) = print(io, "Parse date in YYYYMMDD format")
+
 function parsenext(parser::DateYYYYMMDD, str::ByteVector, pos, sep)
     len = length(str)
     len ≥ pos + 8 || return MaybeParsed{Date}(pos_to_error(pos + 9)) # not enough characters
@@ -259,6 +261,8 @@ Skip a delimited field.
 """
 struct Skip <: AbstractParser{Void} end
 
+show(io::IO, ::Skip) = print(io, "skip field (parsed as `nothing`)")
+
 function parsenext(parser::Skip, str::ByteVector, pos, sep::UInt8)
     len = length(str)
     @inbounds while pos ≤ len
@@ -278,6 +282,8 @@ struct ViewBytes <: AbstractParser{SubArray{UInt8,1,Array{UInt8,1},
                                             Tuple{UnitRange{Int64}},
                                             true}}
 end
+
+show(io::IO, ::ViewBytes) = print(io, "return field as bytes (SubArray)")
 
 function parsenext(parser::ViewBytes, str::ByteVector, start, sep::UInt8)
     pos = start
@@ -310,6 +316,14 @@ Line(PosInteger(), Skip(), DateYYYYMMDD())
 """
 struct Line{T <: Tuple, S, K} <: AbstractParser{S}
     parsers::T
+end
+
+function show(io::IO, parser::Line)
+    print(io, "parse line as the following:")
+    for p in parser.parsers
+        print(io, "\n    ")
+        print(io, p)
+    end
 end
 
 function Line{T <: Tuple}(parsers::T)
