@@ -1,4 +1,5 @@
 using ByteParsers
+using ByteParsers: FixEmpty
 using Base.Test
 using InferenceUtilities
 
@@ -85,6 +86,14 @@ end
     @test repr(DateYYYYMMDD()) == "Parse date in YYYYMMDD format"
 end
 
+@testset "fix empty values" begin
+    p = FixEmpty(-1, PosInteger())
+    @test parsenext(p, b";", 1, sc) ≂ MaybeParsed{Int}(2, -1)
+    @test parsenext(p, b"2;", 1, sc) ≂ MaybeParsed{Int}(3, 2)
+    @test parsedtype(p) ≡ Int
+    @test repr(p) == "parse empty fields as -1, otherwise $(inner_parser)"
+end
+
 @testset "parsed types" begin
     @test parsedtype(PosInteger()) ≡ Int
     @test parsedtype(PosFixedInteger(2)) ≡ Int
@@ -93,17 +102,21 @@ end
 end
 
 @testset "parsing line" begin
-    line1 = b"1212;skipped;kept;"
-    mp1 = MaybeParsed(length(line1)+1, (1212, b"kept")) # second value skipped
-    parser1 = Line(PosInteger(), Skip(), ViewBytes())
-    @test length(parser1) == 2
-    @test parser1[1] == PosInteger()
-    @test parser1[2] == ViewBytes()
+    line1 = b";1212;skipped;kept;"
+    mp1 = MaybeParsed(length(line1)+1, (-1, 1212, b"kept")) # value skipped
+    parser1 = Line(FixEmpty(-1, PosInteger()), PosInteger(), Skip(), ViewBytes())
+    @test length(parser1) == 3
+    @test parser1[1] ≅ FixEmpty(-1, PosInteger())
+    @test parser1[2] == PosInteger()
+    @test parser1[3] == ViewBytes()
     @test parsenext(parser1, line1, 1, sc) ≅ mp1
     @test parsenext(Line(PosInteger()), b"1bad;", 1, sc) ≅
         MaybeParsed{Tuple{Int}}(-2)
     @test @isinferred parsenext(parser1, line1, 1, sc)
     @test repr(parser1) ==
-        ("parse line as the following:\n    " * repr(PosInteger()) * "\n    " *
-         repr(Skip()) * "\n    " * repr(ViewBytes()))
+        ("parse line as the following:\n    " *
+         repr(FixEmpty(-1, PosInteger())) * "\n    " *
+         repr(PosInteger()) * "\n    " *
+         repr(Skip()) * "\n    " *
+         repr(ViewBytes()))
 end

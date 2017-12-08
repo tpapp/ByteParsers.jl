@@ -63,8 +63,8 @@ end
 """
     MaybeParsed(pos, [value])
 
-When `pos > 0`, it is the position of the character after parsing, and `value`
-holds the value. When `pos < 0`, it wraps the error code (see
+When `pos > 0`, it is the position of the character **after** parsing, and
+`value` holds the value. When `pos < 0`, it wraps the error code (see
 [`pos_to_error`](@ref)).
 """
 struct MaybeParsed{T}
@@ -292,6 +292,60 @@ function parsenext(parser::ViewBytes, str::ByteVector, start, sep::UInt8)
     return MaybeParsed(pos, @view str[start:(pos-2)])
     @label error
     MaybeParsed{parsedtype(parser)}(pos)
+end
+
+
+# capture known values WIP
+
+# struct Capture{T, S, P <: AbstractParser{S}} <: AbstractParser{Union{T,S}}
+#     dict::Dict{ByteVector, S}
+#     inner_parser::P
+# end
+
+# function _captured(dict::Dict{ByteVector, S}, str, start, sep) where S
+#     for (key, value) in dict
+#         len = length(key)
+#         stop = start + len
+#         if length(str) ≥ stop &&
+#             str[stop] == sep &&
+#             all(@view str[pos:(pos+len-1)] .== key)
+#             return MaybeParsed(stop + 1, key)
+#         end
+#     end
+#     MaybeParsed{S}(start)
+# end
+
+# function show(io::IO, parser::Capture)
+#     @unpack dict, inner_parser = parser
+#     print(io, "parser\n    capturing $(parser.dict)\n    inner parser ")
+#     print(io, parser.inner)
+# end
+
+# function parsenext(parser::Capture, str::ByteVector, start, sep::UInt8)
+#     @unpack values, inner_parser = parser
+#     ifparsed
+# end
+
+
+# empty fields
+
+struct FixEmpty{T, P <: AbstractParser{T}} <: AbstractParser{T}
+    empty_value::T
+    inner_parser::P
+end
+
+function show(io::IO, parser::FixEmpty)
+    @unpack empty_value, inner_parser = parser
+    print(io, "parse empty fields as $(empty_value), otherwise " * repr(inner_parser))
+end
+
+function parsenext(parser::FixEmpty, str::ByteVector, start, sep::UInt8)
+    @unpack empty_value, inner_parser = parser
+    if str[start] == sep
+        MaybeParsed(start + 1, empty_value)
+    else
+        parsenext(inner_parser, str, start, sep)
+    end
 end
 
 
