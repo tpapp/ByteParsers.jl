@@ -2,12 +2,11 @@ __precompile__()
 module ByteParsers
 
 using Base.Dates: daysinmonth, UTD, totaldays
-
 import Base: getindex, isequal, length, show, unsafe_get
 
-using ArgCheck
-using DocStringExtensions
-using MacroTools
+using ArgCheck: @argcheck
+using DocStringExtensions: SIGNATURES
+using MacroTools: @capture
 using Parameters: @unpack
 
 export
