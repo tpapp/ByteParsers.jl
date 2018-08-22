@@ -380,7 +380,7 @@ function show(io::IO, parser::Line)
     end
 end
 
-function Line{T <: Tuple}(parsers::T)
+function Line(parsers::T) where T <: Tuple
     parsedtypes = map(parsedtype, parsers)
     keep(T) = T ≠ Void
     S = Tuple{Iterators.filter(keep, parsedtypes)...}
